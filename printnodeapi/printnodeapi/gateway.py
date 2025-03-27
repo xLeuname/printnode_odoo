@@ -1,5 +1,4 @@
 import json
-
 import requests
 
 from .auth import Auth, Unauthorized
@@ -10,7 +9,6 @@ from .util import camel_to_underscore
 
 
 class Gateway:
-
     URL = 'https://api.printnode.com'
 
     def __init__(self, **kwargs):
@@ -27,43 +25,43 @@ class Gateway:
 
     @property
     def computers(self):
-        return self._computers.get_computers
+        return self._computers.get_computers()
 
     @property
     def printers(self):
-        return self._computers.get_printers
+        return self._computers.get_printers()
 
     @property
     def printjobs(self):
-        return self._computers.get_printjobs
+        return self._computers.get_printjobs()
 
     @property
     def scales(self):
-        return self._computers.get_scales
+        return self._computers.get_scales()
 
     @property
     def tag(self):
-        return self._accounts.get_tag
+        return self._accounts.get_tag()
 
     @property
     def api_key(self):
-        return self._accounts.get_api_key
+        return self._accounts.get_api_key()
 
     @property
     def clientkey(self):
-        return self._accounts.get_clientkey
+        return self._accounts.get_clientkey()
 
     @property
     def clients(self):
-        return self._accounts.get_clients
+        return self._accounts.get_clients()
 
     @property
     def states(self):
-        return self._computers.get_states
+        return self._computers.get_states()
 
     def PrintJob(self, *args, **kwargs):
         printjob_id = self._computers.submit_printjob(*args, **kwargs)
-        printjob = self.printjobs(printjob=printjob_id)
+        printjob = self._computers.get_printjobs(printjob=printjob_id)
         return printjob
 
     def TestDataGenerate(self):
@@ -73,33 +71,26 @@ class Gateway:
         self._auth.delete('test/data/generate')
 
     def ModifyTag(self, tagname, tagvalue):
-        tag = self._accounts.modify_tag(tagname, tagvalue)
-        return tag
+        return self._accounts.modify_tag(tagname, tagvalue)
 
     def DeleteTag(self, tagname):
-        tag = self._accounts.delete_tag(tagname)
-        return tag
+        return self._accounts.delete_tag(tagname)
 
     def CreateAccount(self, **kwargs):
-        acc_post = self._accounts.create_account(**kwargs)
-        return acc_post
+        return self._accounts.create_account(**kwargs)
 
     def ModifyAccount(self, **kwargs):
-        acc_id = self._accounts.modify_account(**kwargs)
-        return self._factory.create_account(acc_id)
+        acc_data = self._accounts.modify_account(**kwargs)
+        return self._factory.create_account(acc_data)
 
     def DeleteAccount(self, **kwargs):
-        boolean = self._accounts.delete_account(**kwargs)
-        return boolean
+        return self._accounts.delete_account(**kwargs)
 
     def DeleteApiKey(self, api_key):
-        key = self._accounts.delete_api_key(api_key)
-        return key
+        return self._accounts.delete_api_key(api_key)
 
     def CreateApiKey(self, api_key):
-        key = self._accounts.create_api_key(api_key)
-        return key
+        return self._accounts.create_api_key(api_key)
 
     def ModifyClientDownloads(self, client_id, enabled):
-        clients = self._accounts.modify_client_downloads(client_id, enabled)
-        return clients
+        return self._accounts.modify_client_downloads(client_id, enabled)
