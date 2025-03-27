@@ -3,7 +3,6 @@ import os
 import json
 import requests
 import sys
-from future.utils import raise_from
 
 
 class Auth:
@@ -12,8 +11,7 @@ class Auth:
         self._url = url
         self._sslcert = sslcert
         if sslcert is not None and not os.path.isfile(sslcert):
-            raise FileNotFoundError(
-                'sslcert file "{}" not found'.format(sslcert))
+            raise FileNotFoundError(f'sslcert file "{sslcert}" not found')
         if {'email', 'password'} == set(kwargs):
             self._init_from_credentials(**kwargs)
         elif {'apikey'} == set(kwargs):
@@ -27,7 +25,7 @@ class Auth:
         elif {'apikey', 'child_id'} == set(kwargs):
             self._init_from_child_id(**kwargs)
         else:
-            raise KeyError('incorrect constructor args combination')
+            raise KeyError('Incorrect constructor args combination')
 
     def _init_from_credentials(self, email, password):
         self._auth = (email, password)
@@ -66,14 +64,6 @@ class Auth:
         return self._request(requests.delete, endpoint, None, request_headers)
 
     def _request(self, method, endpoint, fields=None, request_headers=None):
-        # request handling
-
-        # :param method      - requests.(get/post/patch/delete)
-        # :param endpoint    - https://api.printnode.com/(endpoint)
-        # :param fields      - data fields to be sent with a post or patch
-        # :param request_headers- if a function requires an extra header or has
-        # custom user set headers, add them to _headers
-
         if not endpoint.startswith('/'):
             endpoint = '/' + endpoint
         other_args = {}
@@ -99,15 +89,14 @@ class Auth:
 
         content_type = response.headers.get('content-type')
         if content_type != 'application/json':
-            template = 'Incorrect Content-Type "{}" for url "{}"'
-            raise ValueError(template.format(content_type, url))
+            raise ValueError(f'Incorrect Content-Type "{content_type}" for url "{url}"')
         response_obj = response.json()
         if sys.version_info[0] < 3:
             response_obj = self._fix_unicode(response_obj)
 
-        if 401 == response.status_code:
+        if response.status_code == 401:
             raise Unauthorized(response.status_code, **response_obj)
-        elif 429 == response.status_code:
+        elif response.status_code == 429:
             raise TooManyRequests(response.status_code, **response_obj)
         elif self._is_hundreth(4, response.status_code):
             raise ClientError(response.status_code, **response_obj)
@@ -116,43 +105,26 @@ class Auth:
         elif self._is_hundreth(2, response.status_code):
             return response_obj
         else:
-            raise Exception('status code: ' + str(response.status_code))
+            raise Exception(f'status code: {response.status_code}')
 
     def _is_hundreth(self, hundreth, number):
-        pattern = str(hundreth) + '\d{2,}'
-        return bool(re.match(pattern, str(number)))
+        return bool(re.match(fr'{hundreth}\d{{2,}}', str(number)))
 
     def _fix_unicode(self, json_object):
-        returnvalue = json_object
-        if type(json_object) is dict:
-            returnvalue = {}
-            for k, v in json_object.iteritems():
-                if type(k) is unicode:
-                    k = k.encode('utf-8')
-                if type(v) is dict or type(v) is list:
-                    v = self._fix_unicode(v)
-                if type(v) is unicode:
-                    v = v.encode('utf-8')
-                returnvalue.update({k: v})
-        if type(json_object) is list:
-            returnvalue = []
-            for x in json_object:
-                if type(x) is unicode:
-                    x = x.encode('utf-8')
-                if type(x) is dict or type(x) is list:
-                    x = self._fix_unicode(x)
-                returnvalue.append(x)
-        if type(json_object) is unicode:
-            returnvalue = json_object.encode('utf-8')
-        return returnvalue
+        if isinstance(json_object, dict):
+            return {k.encode('utf-8') if isinstance(k, str) else k:
+                    v.encode('utf-8') if isinstance(v, str) else self._fix_unicode(v)
+                    for k, v in json_object.items()}
+        elif isinstance(json_object, list):
+            return [x.encode('utf-8') if isinstance(x, str) else self._fix_unicode(x) for x in json_object]
+        elif isinstance(json_object, str):
+            return json_object.encode('utf-8')
+        return json_object
 
 
 class ApiError(RuntimeError):
     def __init__(self, status_code, code, message, uid=None, **remaining):
-        super(ApiError, self).__init__('{}({}): {}'.format(
-            code,
-            status_code,
-            message))
+        super().__init__(f'{code}({status_code}): {message}')
         self.status_code = status_code
         self.code = code
         self.message = message
@@ -214,4 +186,4 @@ class rewrite_requests_error:
         if exc_type is None:
             return
         exc = self.mapping.get(exc_type, RequestError)
-        raise_from(exc(str(exc_value)), exc_value)
+        raise exc(str(exc_value))
